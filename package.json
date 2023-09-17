@@ -1,0 +1,20 @@
+{
+  "name": "searchfiles",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start-dev": "ts-node --esm src/index.ts",
+    "create-folders": "node src/createFolders.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.6.2"
+  },
+  "dependencies": {
+    "mkdirp": "^3.0.1"
+  }
+}

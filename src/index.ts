@@ -1,5 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
+import fsStream from "fs"
+import cluster from "cluster"
 
 const folderOrigin = "src/sua_pasta_raiz"
 const folderDestination = "src/folders"
@@ -26,41 +28,68 @@ const emptyFolder = async (path: string) => {
   }
 }
 
+const copyFile = async (src: string, dest: string) => {
+  return new Promise<void>((resolve, reject) => {
+    const readder = fsStream.createReadStream(src)
+    const writter = fsStream.createWriteStream(dest)
+
+    readder.on("error", reject)
+    writter.on("error", reject)
+
+    readder.pipe(writter)
+    readder.on("end", () => {
+      // fs.unlink(src)
+      //   .then(() => resolve())
+      //   .catch(reject);
+      resolve()
+    })
+  })
+}
+
 const verifyFolders = async (
   folderPath: string,
   destinationFolderPath: string
 ) => {
   const label = `tempo-de-execucao-${counter}`
-  console.time(label)
   counter++
+  console.time(label)
+  let files = await filesReaddir(folderPath)
+  const numChildProcesses = 2 // Número de processos filhos
+  const filesPerProcess = Math.ceil(files.length / numChildProcesses)
 
-  const files = await filesReaddir(folderPath)
-  const promisesFiles = files.map(async (file) => {
-    try {
-      const dir = path.join(folderPath, file)
-      const destinationPath = path.join(destinationFolderPath, file)
+  const fileSubsets = []
+  for (let i = 0; i < numChildProcesses; i++) {
+    const startIndex = i * filesPerProcess
+    const endIndex = startIndex + filesPerProcess
+    fileSubsets.push(files.slice(startIndex, endIndex))
+  }
 
-      const statsFiles = await fs.stat(dir)
-      const time = dateFolder(statsFiles)
-      
-      if (statsFiles.isDirectory()) {
-        fs.mkdir(destinationPath)
-        verifyFolders(dir, destinationPath)
-        await emptyFolder(dir)
-      } else {
-        if (time) {
-          fs.copyFile(dir, destinationPath)
-          fs.unlink(dir)
-        }
-      }
-    } catch (err) {
-      console.log("error in process", err)
+  if (cluster.isPrimary) {
+    console.log(`processo principal criado: ${process.pid}`)
+
+    for (let i = 0; i < numChildProcesses; i++) {
+      console.log(`processo filho criado: ${i}`)
+      const child = cluster.fork()
+      const fileSubset = fileSubsets[i]
+
+      child.send({ files: fileSubset }) // Enviar subconjunto de arquivos para o processo filho
     }
-  })
 
-  Promise.all(promisesFiles)
+    cluster.on("exit", (worker, _code, _signal) => {
+      console.log(`Processo ${worker.process.pid} finalizado`)
+      cluster.fork()
+    })
+  } else {
+    process.on("message", async (message: any) => {
+      const { files: fileSubset } = message
+      for (const file of fileSubset) {
+       console.log(file)
+      }
+    })
+  }
   console.timeEnd(label)
 }
+
 
 const main = async () => {
   await verifyFolders(folderOrigin, folderDestination)

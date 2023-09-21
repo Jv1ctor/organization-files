@@ -3,8 +3,8 @@ import path from "path";
 import {mkdirp} from "mkdirp";
 
 const baseDirectory = './src/sua_pasta_raiz'; // Altere para o diretório raiz onde deseja criar as pastas e arquivos
-const numFolders = 5; // Número de pastas
-const numFilesPerFolder = 10; // Número de arquivos por pasta
+const numFolders = 10; // Número de pastas
+const numFilesPerFolder = 5; // Número de arquivos por pasta
 
 function getRandomDate() {
   const start = new Date(2022, 0, 1).getTime();
@@ -35,7 +35,11 @@ function createRandomFiles(folderPath) {
     const filePath = path.join(folderPath, fileName);
 
     // Crie o arquivo com algum conteúdo aleatório
-    const fileContent = `Conteúdo aleatório para ${fileName}`;
+
+    let fileContent = ''
+    for (let i = 1; i <= 1e6; i++) {
+      fileContent += `Conteúdo aleatório para ${fileName}`;
+    }
     fs.writeFileSync(filePath, fileContent);
 
     // Defina datas de modificação aleatórias para os arquivos
